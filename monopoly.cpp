@@ -3,9 +3,76 @@
 #include <list>
 #include <vector>
 #include <algorithm>
+#include <math.h>
 using namespace std;
 
 class Player; // Déclaration anticipée
+
+class Utils {
+  public:
+    /** Demande à l'utilisateur une entrée valide (Oui/Non) et retourne un bool.
+     * @param prompt Le message à afficher.
+     * @param valid_yes Liste des réponses considérées comme "Oui".
+     * @param valid_no Liste des réponses considérées comme "Non".
+     * @return true si la réponse est dans valid_yes, false si dans valid_no.
+     */
+    bool getValidatedPositiveNegativeStringInput(string prompt, vector<string> valid_yes = {"O", "o"}, vector<string> valid_no = {"N", "n"}) {
+      string local_input;
+      bool valid = false;
+
+      auto printValidAnswers = [&valid_yes, &valid_no]() {
+        cout << " (";
+        for (size_t i = 0; i < valid_yes.size(); i++) {
+          cout << valid_yes[i];
+          if (i != valid_yes.size() - 1) cout << "/";
+        }
+        cout << " - ";
+        for (size_t i = 0; i < valid_no.size(); i++) {
+          cout << valid_no[i];
+          if (i != valid_no.size() - 1) cout << "/";
+        }
+        cout << ")";
+      };
+
+      do {
+        cout << prompt;
+        printValidAnswers();
+        cout << endl << ">>> ";
+
+        cin >> local_input;
+
+        if (find(valid_yes.begin(), valid_yes.end(), local_input) != valid_yes.end()) {
+          return true;
+        } else if (find(valid_no.begin(), valid_no.end(), local_input) != valid_no.end()) {
+          return false;
+        } else {
+          cout << "Erreur : entrée invalide, veuillez répondre par";
+          printValidAnswers();
+          cout << " !" << endl;
+        }
+      } while (!valid);
+
+      return false; // Ne devrait jamais être atteint
+    }
+
+    /** Demande à l'utilisateur d'entrer un entier strictement positif et valide.
+    * @param prompt Le message à afficher.
+    * @return Un entier strictement positif.
+    */
+    int getValidatedPositiveIntegerInput(string prompt) {
+      int value;
+      do {
+        cout << prompt << endl << ">>> ";
+        cin >> value;
+        if (cin.fail() || value <= 0) { // Si l'entrée n'est pas un entier
+          cin.clear(); // Réinitialise l'état du flux
+          cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Vide le buffer
+          cout << "Erreur : veuillez entrer un entier strictement positif valide !" << endl;
+        }
+      } while (cin.fail() || value <= 0);
+      return value;
+    }
+};
 
 class Property {
   public:
@@ -36,17 +103,17 @@ class Plateau {
 
     Plateau() {
       properties = {
-        {"depart", 0}, {"boulevardDeBelleville", 60}, {"caisseCommunaute", 0}, {"rueLecourbe", 60}, {"impots", -200}, 
-        {"gareMontparnasse", 200}, {"rueDeVaugirard", 100}, {"chance", 0}, {"rueDeCourcelles", 100}, {"avenueDeLaRepublique", 120},
+        {"depart", 0}, {"boulevard De Belleville", 60}, {"caisse Communaute", 0}, {"rue Lecourbe", 60}, {"impots", -200}, 
+        {"gare Montparnasse", 200}, {"rue De Vaugirard", 100}, {"chance", 0}, {"rue De Courcelles", 100}, {"avenue De La Republique", 120},
 
-        {"prison", 0}, {"boulevardDeLaVillette", 140}, {"electricite", 150}, {"avenueDeNeuilly", 140}, {"rueDeParadis", 160}, 
-        {"gareDeLyon", 200}, {"avenueMozart", 180}, {"caisseCommunaute", 0}, {"boulevardST-Michel", 180}, {"placePigalle", 200},
+        {"prison", 0}, {"boulevard De La Villette", 140}, {"electricite", 150}, {"avenue De Neuilly", 140}, {"rue De Paradis", 160}, 
+        {"gare De Lyon", 200}, {"avenue Mozart", 180}, {"caisse Communaute", 0}, {"boulevard ST-Michel", 180}, {"place Pigalle", 200},
 
-        {"parc", 0}, {"avenueMatignon", 220}, {"chance", 0}, {"boullevradMalesherbes", 220}, {"avenueHenri-Martin", 240}, 
-        {"gareDuNord", 200}, {"foubourgST-Honore", 260}, {"placeDeLaBourse", 260}, {"eaux", 150}, {"rueLaFayette", 280},
+        {"parc", 0}, {"avenue Matignon", 220}, {"chance", 0}, {"boullevrad Malesherbes", 220}, {"avenue Henri-Martin", 240}, 
+        {"gare Du Nord", 200}, {"foubourg ST-Honore", 260}, {"place De La Bourse", 260}, {"eaux", 150}, {"rue La Fayette", 280},
 
-        {"allezPrison", 0}, {"avenueDeBreteuil", 300}, {"avenueFoch", 300}, {"caisseCommunaute", 0}, {"boulevardDesCapucines", 320}, 
-        {"gareST-Lazare", 200}, {"chance", 0}, {"avenueDesChamps-Elysee", 350}, {"taxe", -200}, {"rueDeLaPaix", 400}
+        {"allez Prison", 0}, {"avenue De Breteuil", 300}, {"avenue Foch", 300}, {"caisse Communaute", 0}, {"boulevard Des Capucines", 320}, 
+        {"gare ST-Lazare", 200}, {"chance", 0}, {"avenue Des Champs-Elysee", 350}, {"taxe", -200}, {"rue De LaPaix", 400}
       };
     }
 
@@ -67,6 +134,7 @@ class Plateau {
 class Player {
   public:
     Plateau plateau;
+    Utils utils;
     string name;                           // Nom du joueur
     int money;                             // Argent disponible
     int position;                          // Position actuelle sur le plateau
@@ -137,17 +205,45 @@ class Player {
       } else if (money < currentProperty->price) {
         cout << "Vous n'avez pas assez d'argent pour acheter cette propriété." << endl;
         return;
+      } else if (currentProperty->price < 0) {
+        cout << "Vous devez : " << abs(currentProperty->price) << " skibidibucks a la banque.";
+        money += currentProperty->price;
       } else if (currentProperty->price > 0){
-          string local_input;
-          cout << "voulez-vous acheter cette propriete (O/N)?" << endl << ">>> ";
-          cin >> local_input;
 
-          if (local_input == "O" || local_input == "o") {
-          currentProperty->owner = this; // Définir le propriétaire
-          ownedProperties.push_back(currentProperty); // Ajouter au joueur
-          money -= currentProperty->price;
-          cout << name << " a acheté " << currentProperty->name << " pour " << currentProperty->price << " skibidibucks." << endl;
+        if (utils.getValidatedPositiveNegativeStringInput("voulez-vous acheter cette propriete pour " + to_string(currentProperty->price) + " skibidibucks")) {
+        currentProperty->owner = this; // Définir le propriétaire
+        ownedProperties.push_back(currentProperty); // Ajouter au joueur
+        money -= currentProperty->price;
+        cout << name << " a acheté " << currentProperty->name << " pour " << currentProperty->price << " skibidibucks." << endl;
           }
+      }
+    }
+
+    void upgradeProperty() {
+      if (utils.getValidatedPositiveNegativeStringInput("voulez-vous ameliorer une de vos propriete")) {
+        string local_input;
+        cout << "Quelle propriete souhaitez-vous ameliorer : ";
+        for (size_t i = 0; i < ownedProperties.size(); i++) {
+          cout << i << ". " << ownedProperties[i]->name;
+          if (ownedProperties[i]->hotel) {
+            cout << ", 1 hotel";
+          } else {
+            cout << ", " << ownedProperties[i]->houses << " maison(s)";
+          }
+          if (i != ownedProperties.size() - 1) {
+            cout << " | "; // Ajouter une virgule entre les propriétés sauf pour la dernière
+          }
+        }
+        cout << "." << endl << ">>> ";
+        cin >> local_input;
+        if (ownedProperties[stoi(local_input)]->houses == 4) {
+          ownedProperties[stoi(local_input)]->houses = 0;
+          ownedProperties[stoi(local_input)]->hotel = true;
+          money -= ownedProperties[stoi(local_input)]->getRent();
+        } else {
+          ownedProperties[stoi(local_input)]->houses += 1;
+          money -= ownedProperties[stoi(local_input)]->getRent();
+        }
       }
     }
 
@@ -163,12 +259,16 @@ class Player {
       
       displayOwnedProperties();
       attemptPurchase(currentProperty);
+      if (!ownedProperties.empty()){
+        upgradeProperty();
       }
+    }
 };
 
 class Game {
     private:
       Plateau plateau;
+      Utils utils;
       // Liste des joueurs
       vector<Player> players;
 
@@ -180,10 +280,10 @@ class Game {
         cout << endl << "------------------------------- Bienvenue dans le jeu de Monopoly simplifié ! -------------------------------" << endl << endl;
 
         // Demander à l'utilisateur combien de tours le jeu doit durer
-        int iteration = getValidatedPositiveIntegerInput("Combien d'itérations (nombre de tour(s)) voulez-vous ?");
+        int iteration = utils.getValidatedPositiveIntegerInput("Combien d'itérations (nombre de tour(s)) voulez-vous ?");
 
         // Demander à l'utilisateur combien de joueurs vont participer
-        int numPlayers = getValidatedPositiveIntegerInput("Combien y a-t-il de joueurs ?");
+        int numPlayers = utils.getValidatedPositiveIntegerInput("Combien y a-t-il de joueurs ?");
 
         // Ajoute les joueurs au vecteur `players` avec leurs noms
         for (int i = 0; i < numPlayers; ++i) {
@@ -201,24 +301,6 @@ class Game {
             player.play();
           }
         }
-      }
-
-      /** Demande à l'utilisateur d'entrer un entier strictement positif et valide.
-       * @param prompt Le message à afficher.
-       * @return Un entier strictement positif.
-       */
-      int getValidatedPositiveIntegerInput(string prompt) {
-        int value;
-        do {
-          cout << prompt << endl << ">>> ";
-          cin >> value;
-          if (cin.fail() || value <= 0) { // Si l'entrée n'est pas un entier
-            cin.clear(); // Réinitialise l'état du flux
-            cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Vide le buffer
-            cout << "Erreur : veuillez entrer un entier strictement positif valide !" << endl;
-          }
-        } while (cin.fail() || value <= 0);
-        return value;
       }
 };
 
