@@ -10,16 +10,17 @@ class Player; // Déclaration anticipée
 
 class Utils {
   public:
-    /** Demande à l'utilisateur une entrée valide (Oui/Non) et retourne un bool.
+    /** Demande à l'utilisateur une entrée valide et retourne un bool.
      * @param prompt Le message à afficher.
-     * @param valid_yes Liste des réponses considérées comme "Oui".
-     * @param valid_no Liste des réponses considérées comme "Non".
-     * @return true si la réponse est dans valid_yes, false si dans valid_no.
+     * @param valid_yes Liste des réponses considérées comme "Positive".
+     * @param valid_no Liste des réponses considérées comme "Negative".
+     * @return 'true' si la réponse est dans valid_yes, 'false' si dans valid_no.
      */
     bool getValidatedPositiveNegativeStringInput(string prompt, vector<string> valid_yes = {"O", "o"}, vector<string> valid_no = {"N", "n"}) {
       string local_input;
       bool valid = false;
 
+      // Fonction lambda pour afficher les réponses acceptées
       auto printValidAnswers = [&valid_yes, &valid_no]() {
         cout << " (";
         for (size_t i = 0; i < valid_yes.size(); i++) {
@@ -34,6 +35,7 @@ class Utils {
         cout << ")";
       };
 
+      // Demande à l'utilisateur une entrée valide
       do {
         cout << prompt;
         printValidAnswers();
@@ -84,7 +86,7 @@ class Property {
     bool mortgaged;
 
   public:
-    Property(string name, int price):
+    Property(string name, int price, string type="special",int house_price=0, int hotel_price=0, string color="n"):
       name(name), price(price), owner(nullptr), houses(0), hotel(false), mortgaged(false)
     {}
 
@@ -92,7 +94,7 @@ class Property {
     int getRent() const {
       if (mortgaged) return 0; // Pas de loyer si hypothéqué
       if (hotel) return price * 2; // Exemple : loyer avec hôtel
-      return price / 10 + (houses * 50); // Exemple : loyer avec maisons
+      else return price / 10 + (houses * 50); // Exemple : loyer avec maisons
     }
 
 };
@@ -164,14 +166,11 @@ class Player {
      * Réinitialise le compteur de doubles consécutifs si ce n'est pas le cas.
      */
     bool isDouble() {
-      if (dice1 != dice2) {
-        consecutiveDouble=0;
-        return false;
-      } else {
+      if (dice1 == dice2) {
         cout << "Vous avez fait un double, vous pouvez rejouer." << endl; 
         consecutiveDouble++;
-        return true;
-      }
+        return true;        
+      } else return false;
     }
 
     /** Affiche la liste des propriétés possédées et l'argent disponible.
@@ -251,6 +250,8 @@ class Player {
      * Lancer les dés, déplacer le joueur et gérer les interactions avec la case.
      */
     void play() {
+      consecutiveDouble=0;
+      do {
       auto [dice1, dice2] = plateau.rollDice();
       cout << "Dé 1 : " << dice1 << "   |   " << "Dé 2 : " << dice2 << "   |   " << "nombre de déplacements : " << dice1 + dice2 << endl;
       position = (position + dice1 + dice2) % plateau.properties.size();
@@ -262,6 +263,7 @@ class Player {
       if (!ownedProperties.empty()){
         upgradeProperty();
       }
+      } while (isDouble());
     }
 };
 
